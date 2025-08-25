@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 聊天助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-header {
+            background: linear-gradient(120deg, #4a5568, #2d3748);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .chat-header::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 16px 22px;
+            border-radius: 24px;
+            line-height: 1.6;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(120deg, #3b82f6, #60a5fa);
+            color: white;
+            border-bottom-right-radius: 8px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: linear-gradient(120deg, #f1f5f9, #e2e8f0);
+            color: #334155;
+            border-bottom-left-radius: 8px;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            background: linear-gradient(120deg, #f1f5f9, #e2e8f0);
+            color: #334155;
+            border-bottom-left-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px 22px;
+        }
+
+        .typing-text {
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        .typing-dots {
+            display: flex;
+            align-items: center;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #94a3b8;
+            margin: 0 3px;
+            animation: bounce 1.3s linear infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-7px);
+            }
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 统一选项区域样式 */
+        .options-section {
+            margin-bottom: 20px;
+        }
+
+        .option-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .option-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(120deg, #edf2f7, #e2e8f0);
+            color: #4a5568;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .option-button:hover::before {
+            left: 100%;
+        }
+
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .option-button.selected {
+            background: linear-gradient(120deg, #3b82f6, #4f46e5);
+            color: white;
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .option-button.selected:hover {
+            background: linear-gradient(120deg, #2563eb, #4338ca);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.5);
+        }
+
+        .option-icon {
+            font-size: 1.2em;
+        }
+
+        /* 文件上传区域样式 */
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .upload-status {
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 0.95em;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            justify-content: center;
+        }
+
+        .upload-status.success {
+            background: linear-gradient(120deg, #dcfce7, #bbf7d0);
+            color: #166534;
+        }
+
+        .upload-status.error {
+            background: linear-gradient(120deg, #fee2e2, #fecaca);
+            color: #991b1b;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 12px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 16px 24px;
+            border: 2px solid #e2e8f0;
+            border-radius: 30px;
+            outline: none;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #f8fafc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #user-input:focus {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+        }
+
+        #send-button {
+            padding: 16px 30px;
+            background: linear-gradient(120deg, #3b82f6, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #send-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        #send-button:hover::before {
+            left: 100%;
+        }
+
+        #send-button:hover {
+            background: linear-gradient(120deg, #2563eb, #4338ca);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        #send-button:disabled {
+            background: linear-gradient(120deg, #94a3b8, #64748b);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .system-message {
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 15px;
+            font-size: 0.95em;
+            background: rgba(241, 245, 249, 0.7);
+            border-radius: 12px;
+            margin: 5px 0;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+                align-items: stretch;
+            }
+
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+                width: 100%;
+            }
+
+            .chat-header {
+                padding: 20px;
+                font-size: 1.3em;
+            }
+
+            .chat-messages {
+                padding: 18px;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 14px 18px;
+                font-size: 0.95em;
+            }
+
+            .option-group {
+                margin-bottom: 15px;
+                gap: 10px;
+            }
+
+            .option-button {
+                padding: 10px 18px;
+                font-size: 0.9em;
+            }
+
+            .chat-input {
+                gap: 10px;
+            }
+
+            #user-input {
+                padding: 14px 20px;
+                font-size: 16px; /* 防止iOS缩放 */
+            }
+
+            #send-button {
+                padding: 14px 24px;
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chat-header {
+                padding: 18px;
+                font-size: 1.2em;
+            }
+
+            .message {
+                max-width: 95%;
+                padding: 12px 16px;
+                font-size: 0.9em;
+            }
+
+            .option-group {
+                gap: 8px;
+            }
+
+            .option-button {
+                padding: 8px 16px;
+                font-size: 0.85em;
+            }
+
+            .typing-indicator {
+                padding: 14px 18px;
+            }
+        }
+
+        /* 滚动条样式 */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: linear-gradient(120deg, #cbd5e0, #94a3b8);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(120deg, #94a3b8, #64748b);
+        }
+    </style>
+    <!-- 引入 marked 库用于 Markdown 转 HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+</head>
+<body>
+<div class="chat-container">
+    <div class="chat-header">
+        AI 智能助手
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        <div class="message ai-message">
+            <p>
+                您好！我是zmbwcx2003的AI助手🤖。有什么我可以帮您的吗？</p>
+            <p>我可以帮助您：</p>
+            <ul>
+                <li>回答各种问题和提供信息</li>
+                <li>进行知识库搜索（上传文档后使用）</li>
+                <li>协助编程和解决技术难题</li>
+            </ul>
+            <p>选择功能后输入您的问题，我会尽力为您提供帮助！✨</p>
+        </div>
+    </div>
+    <div class="chat-input-container">
+        <!-- 统一的选项按钮区域 -->
+        <div class="options-section">
+            <div class="option-group">
+                <button class="option-button" id="internetSearch">
+                    <span class="option-icon">🌐</span>
+                    <span class="option-text">联网搜索</span>
+                </button>
+                <button class="option-button" id="knowledgeSearch">
+                    <span class="option-icon">📚</span>
+                    <span class="option-text">知识库搜索</span>
+                </button>
+                <div class="file-upload-wrapper">
+                    <button class="option-button" id="uploadButton">
+                        <span class="option-icon">📁</span>
+                        <span class="option-text">上传文件</span>
+                    </button>
+                    <input type="file" id="file-input" accept=".txt,.pdf,.doc,.docx" class="file-input">
+                </div>
+            </div>
+
+            <!-- 上传状态显示 -->
+            <div id="upload-status" class="upload-status" style="display: none;"></div>
+        </div>
+
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="请输入您的问题..." autocomplete="off">
+            <button id="send-button">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    let botMsgId = null;
+    let currentUserName = null;
+    let chatList = [];
+
+    let internetSearchSelected = false;
+    let knowledgeSearchSelected = false;
+    let imageReadSelected = false;
+
+    // 添加首字显示标志
+    let isFirstChunkReceived = false;
+
+    // 添加处理状态标志，防止多次连续发送
+    let isProcessing = false;
+
+    // 生成随机用户ID
+    const userId = Math.random().toString(36).substring(2, 12);
+    console.log("userId = " + userId);
+    currentUserName = userId;
+
+    // 获取DOM元素
+    const chatMessages = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const internetSearchBtn = document.getElementById('internetSearch');
+    const knowledgeSearchBtn = document.getElementById('knowledgeSearch');
+    const uploadButton = document.getElementById('uploadButton');
+    const fileInput = document.getElementById('file-input');
+    const uploadStatus = document.getElementById('upload-status');
+
+    // 页面加载时自动建立SSE连接
+    window.addEventListener('load', function () {
+        initSSE(userId);
+        userInput.focus();
+
+        // 绑定事件
+        sendButton.addEventListener('click', doChat);
+        userInput.addEventListener('keypress', handleKeyDown);
+        internetSearchBtn.addEventListener('click', () => doInternetSearch(internetSearchSelected));
+        knowledgeSearchBtn.addEventListener('click', () => doKnowledgeSearch(knowledgeSearchSelected));
+        uploadButton.addEventListener('click', triggerFileUpload);
+        fileInput.addEventListener('change', handleFileUpload);
+    });
+
+    // 处理文件上传
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // 显示上传状态
+        showUploadStatus('正在上传...', '');
+
+        // 创建 FormData 对象
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 发送文件到后端
+        fetch('/rag/uploadRagDoc', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('上传失败');
+            })
+            .then(data => {
+                // 显示成功状态
+                showUploadStatus('上传成功', 'success');
+                console.log('文件上传成功:', data);
+                // 清空文件输入框
+                fileInput.value = '';
+            })
+            .catch(error => {
+                // 显示错误状态
+                showUploadStatus('上传失败: ' + error.message, 'error');
+                console.error('文件上传失败:', error);
+            });
+    }
+
+    // 显示上传状态
+    function showUploadStatus(message, type) {
+        uploadStatus.textContent = message;
+        uploadStatus.className = 'upload-status';
+        if (type) {
+            uploadStatus.classList.add(type);
+        }
+        uploadStatus.style.display = 'block';
+
+        // 3秒后自动隐藏成功状态
+        if (type === 'success') {
+            setTimeout(() => {
+                uploadStatus.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    function initSSE(userId) {
+        let source = null;
+        if (window.EventSource) {
+            // 建立连接
+            source = new EventSource('/sse/connect?userId=' + userId);
+            console.log("连接用户=" + userId);
+            currentUserName = userId;
+
+            source.addEventListener('open', function (e) {
+                console.log("建立连接。。。");
+            }, false);
+
+            source.addEventListener('add', function (e) {
+                console.log("add事件...");
+                console.log(e.data);
+                var receiveMsg = e.data;
+
+                // 隐藏打字指示器（仅在第一次接收消息时）
+                if (!isFirstChunkReceived) {
+                    isFirstChunkReceived = true;
+                    hideTypingIndicator();
+
+                    // 启用输入框和发送按钮
+                    resetInputState();
+                }
+
+                var needNew = true;
+                for (var i = 0; i < chatList.length; i++) {
+                    var chatItem = chatList[i];
+                    if (chatItem.botMsgId == botMsgId) {
+                        needNew = false;
+                        break;
+                    }
+                }
+
+                // 立即显示每条消息，不再使用缓冲机制
+                if (needNew) {
+                    // 为空，创建新对象
+                    var newBotContent = {
+                        id: "temp",
+                        content: receiveMsg,
+                        userName: 'bot',
+                        chatType: 'bot',
+                        botMsgId: botMsgId,
+                    };
+                    chatList.push(newBotContent);
+
+                    // 添加AI消息到界面
+                    addAIMessage(receiveMsg);
+                } else {
+                    // 不为空，找到对应的聊天记录流式插入数据
+                    for (var i = 0; i < chatList.length; i++) {
+                        var chatItem = chatList[i];
+                        if (chatItem.botMsgId == botMsgId) {
+                            // 找到对应的聊天记录流式插入数据
+                            chatItem.content += receiveMsg;
+
+                            // 更新AI消息内容
+                            updateLastAIMessage(chatItem.content);
+                            break;
+                        }
+                    }
+                }
+
+                scrollToBottom();
+            });
+
+            source.addEventListener('finish', function (e) {
+                console.log("finish事件...");
+                console.log(e.data);
+                var chatResponse = JSON.parse(e.data);
+                var message = chatResponse.message;
+                var botMsgId = chatResponse.botMsgId;
+
+                for (var i = 0; i < chatList.length; i++) {
+                    var chatItem = chatList[i];
+                    if (chatItem.botMsgId == botMsgId) {
+                        // 找到对应的聊天记录并且转换成html
+                        chatItem.content = marked.parse(message);
+
+                        // 更新AI消息内容
+                        updateLastAIMessageWithHTML(chatItem.content);
+                    }
+                }
+
+                botMsgId = null;
+                scrollToBottom();
+                // 确保输入状态被重置
+                resetInputState();
+            });
+
+            source.addEventListener('error', function (e) {
+                console.log("error事件...");
+                console.log("e.readyState: " + source.readyState);
+
+                if (e.readyState === EventSource.CLOSED) {
+                    console.log('connection is closed');
+                } else {
+                    console.log("Error occured", event);
+                }
+                // close方法用于关闭连接
+                source.close();
+                // 发生错误时也恢复状态
+                resetInputState();
+                hideTypingIndicator();
+                addAIMessage("连接出现错误，请稍后重试。");
+            });
+
+            source.addEventListener("customEvent", function (e) {
+                console.log(e.lastEventId);
+                console.log(e.data);
+            }, false);
+        } else {
+            console.log("浏览器不支持SSE");
+        }
+    }
+
+    function handleKeyDown(event) {
+        if (event.key === 'Enter') {
+            doChat();
+        }
+    }
+
+    function doChat() {
+        // 检查是否正在处理中，如果是则不执行
+        if (isProcessing) {
+            return;
+        }
+
+        // 修复：直接使用全局变量 currentUserName 而不是通过 this 访问
+        var currentUser = currentUserName;
+
+        botMsgId = generateRandomId(12);
+
+        const userInputValue = document.getElementById('user-input').value;
+        var pendingMsg = userInputValue.trim();
+        if (pendingMsg === '') return;
+
+        // 设置处理状态为true，防止重复提交
+        isProcessing = true;
+
+        // 禁用输入框和发送按钮
+        userInput.disabled = true;
+        sendButton.disabled = true;
+        sendButton.textContent = '处理中...';
+
+        // 显示打字指示器
+        showTypingIndicator();
+
+        // 重置首字接收标志
+        isFirstChunkReceived = false;
+
+        // 发送消息到后端
+        var singleChat = {
+            userId: currentUser,
+            question: pendingMsg,
+            botMsgId: botMsgId
+        };
+
+        if (knowledgeSearchSelected && !internetSearchSelected) {
+            console.log("知识库搜索");
+            // 实现知识库搜索
+            fetch('/rag/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question: pendingMsg
+                })
+            })
+                .then(response => response.text())
+                .then(data => {
+                    hideTypingIndicator();
+                    addAIMessage(data);
+                    resetInputState();
+                })
+                .catch(error => {
+                    console.error('知识库搜索错误:', error);
+                    hideTypingIndicator();
+                    addAIMessage("知识库搜索失败: " + error.message);
+                    resetInputState();
+                });
+        } else if (!knowledgeSearchSelected && internetSearchSelected) {
+            console.log("联网搜索");
+            // 实现联网搜索
+            fetch('/chat/doInternet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(singleChat)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    // 联网搜索不需要额外处理，SSE会处理响应
+                }).catch(error => {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addAIMessage("抱歉，联网搜索时发生错误：" + error.message);
+                // 发生错误时也恢复状态
+                resetInputState();
+            });
+        } else {
+            console.log("普通聊天");
+            fetch('/chat/doChat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(singleChat)
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addAIMessage("抱歉，发送请求时发生错误。");
+                // 发生错误时也恢复状态
+                resetInputState();
+            });
+        }
+
+        // 添加用户消息到界面
+        addUserMessage(pendingMsg);
+
+        document.getElementById('user-input').value = '';
+    }
+
+    // 重置输入状态
+    function resetInputState() {
+        isProcessing = false;
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        sendButton.textContent = '发送';
+    }
+
+    // 显示打字指示器
+    function showTypingIndicator() {
+        const typingElement = document.createElement('div');
+        typingElement.className = 'message typing-indicator';
+        typingElement.id = 'typing-indicator';
+        typingElement.innerHTML = `
+            <div class="typing-text">AI正在思考中...</div>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
+        chatMessages.appendChild(typingElement);
+        scrollToBottom();
+    }
+
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+        const typingElement = document.getElementById('typing-indicator');
+        if (typingElement) {
+            chatMessages.removeChild(typingElement);
+        }
+    }
+
+    function generateRandomId(length) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
+    }
+
+    function scrollToBottom() {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function triggerFileUpload() {
+        fileInput.click();
+    }
+
+    function doInternetSearch(selected) {
+        internetSearchSelected = !selected;
+
+        if (internetSearchSelected) {
+            knowledgeSearchSelected = false;
+            imageReadSelected = false;
+            internetSearchBtn.classList.add('selected');
+            knowledgeSearchBtn.classList.remove('selected');
+        } else {
+            internetSearchBtn.classList.remove('selected');
+        }
+    }
+
+    function doKnowledgeSearch(selected) {
+        knowledgeSearchSelected = !selected;
+
+        if (knowledgeSearchSelected) {
+            internetSearchSelected = false;
+            imageReadSelected = false;
+            knowledgeSearchBtn.classList.add('selected');
+            internetSearchBtn.classList.remove('selected');
+        } else {
+            knowledgeSearchBtn.classList.remove('selected');
+        }
+    }
+
+    function doImageRead(selected) {
+        imageReadSelected = !selected;
+
+        if (imageReadSelected) {
+            knowledgeSearchSelected = false;
+            internetSearchSelected = false;
+        }
+    }
+
+    // 添加用户消息
+    function addUserMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message user-message';
+        messageElement.textContent = message;
+        chatMessages.appendChild(messageElement);
+        scrollToBottom();
+    }
+
+    // 添加AI消息
+    function addAIMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message ai-message';
+        messageElement.textContent = message;
+        chatMessages.appendChild(messageElement);
+        scrollToBottom();
+    }
+
+    // 更新最后一条AI消息
+    function updateLastAIMessage(message) {
+        const aiMessages = document.querySelectorAll('.ai-message');
+        if (aiMessages.length > 0) {
+            const lastAIMessage = aiMessages[aiMessages.length - 1];
+            lastAIMessage.textContent = message;
+        }
+    }
+
+    // 更新最后一条AI消息（支持HTML）
+    function updateLastAIMessageWithHTML(htmlContent) {
+        const aiMessages = document.querySelectorAll('.ai-message');
+        if (aiMessages.length > 0) {
+            const lastAIMessage = aiMessages[aiMessages.length - 1];
+            lastAIMessage.innerHTML = htmlContent;
+        }
+    }
+
+    // 滚动到底部
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+</script>
+</body>
+</html>

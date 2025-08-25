@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE 连接测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .event {
+            color: #0066cc;
+        }
+        .data {
+            color: #333;
+        }
+        .error {
+            color: #cc0000;
+        }
+        .info {
+            color: #ff9900;
+        }
+    </style>
+</head>
+<body>
+    <h1>SSE 连接测试页面</h1>
+    
+    <div class="container">
+        <label for="userId">用户ID:</label>
+        <input type="text" id="userId" placeholder="请输入用户ID" value="user123">
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开连接</button>
+    </div>
+
+    <div class="container">
+        <h2>消息记录</h2>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let isConnected = false;
+
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+
+            if (isConnected) {
+                logMessage('info', '已经连接，无需重复连接');
+                return;
+            }
+
+            // 创建 SSE 连接
+            eventSource = new EventSource('/sse/connect?userId=' + encodeURIComponent(userId));
+
+            eventSource.addEventListener('open', function(e) {
+                logMessage('info', '连接已建立');
+                isConnected = true;
+            });
+
+            eventSource.addEventListener('message', function(e) {
+                logMessage('data', '收到消息: ' + e.data);
+            });
+
+            eventSource.addEventListener('error', function(e) {
+                if (e.readyState === EventSource.CLOSED) {
+                    logMessage('error', '连接已关闭');
+                } else {
+                    logMessage('error', '发生错误');
+                }
+                isConnected = false;
+            });
+
+            logMessage('info', '尝试连接到 /sse/connect?userId=' + userId);
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                logMessage('info', '连接已手动关闭');
+                isConnected = false;
+            } else {
+                logMessage('info', '没有活动的连接');
+            }
+        }
+
+        function logMessage(type, message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message ' + type;
+            
+            const time = new Date().toLocaleTimeString();
+            messageElement.innerHTML = `<strong>[${time}]</strong> ${message}`;
+            
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>

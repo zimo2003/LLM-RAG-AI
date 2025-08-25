@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: spring-ai-mcp-client
+  ai:
+    openai:
+      api-key: ${OPEN_API_KEY}
+      base-url: ${OPEN_BASE_URL}
+      chat:
+        options:
+          model: ${OPEN_AI_MODEL}
+    vectorstore:
+      redis:
+        index-name: default-index     #用于存储向量的索引名称
+        initialize-schema: true       #是否初始化所需的模式
+        prefix: 'embedding:'          #redis前缀
+  data:
+    redis:
+      host: 192.168.116.131
+      port: 9379
+      password: 123456
+
+#解决跨域
+website:
+  domain: 192.168.0.104
+
+internet:
+  web-search:
+    searxng:
+      url: http://192.168.116.131:6080/search
+      count: 25   #搜索结果数量限制
+
+
+logging:
+  level:
+    root: info
